@@ -11,25 +11,25 @@ var light = new THREE.PointLight( 0xffffff, 8, 100 );
 light.position.set( 50, 50, 50 );
 scene.add( light );
 
-camera.position.z = 50;
+camera.position.z = 200;
 
-var M_BALL_WORKING_AREA = 130;
+var M_BALL_WORKING_AREA = 60;
 
-var point_energy = new Array();
-for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
-    point_energy[x] = new Array();
-    for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
-	point_energy[x][y] = new Array();
-    }
-}
+// var point_energy = new Array();
+// for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
+//     point_energy[x] = new Array();
+//     for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
+// 	point_energy[x][y] = new Array();
+//     }
+// }
 
-var point_visited = new Array();
-for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
-    point_visited[x] = new Array();
-    for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
-	point_visited[x][y] = new Array();
-    }
-}
+// var point_visited = new Array();
+// for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
+//     point_visited[x] = new Array();
+//     for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
+// 	point_visited[x][y] = new Array();
+//     }
+// }
 
 var draw_points = [];
 
@@ -70,22 +70,83 @@ var neighbor_diffs = [
     [-1, -1, -1],
 ]
 
-function remove_boxes(scene, points) {
 
-    for (key in points) {
-	if (points[key] != 'outside') {
-	    scene.remove(points[key]);
+function generatePointCloudGeometry(color){
+
+    var geometry = new THREE.BufferGeometry();
+
+    var _side_length = (M_BALL_WORKING_AREA * 2 + 1);
+
+    var numPoints = _side_length * _side_length * _side_length;
+
+    var positions = new Float32Array( numPoints*3 );
+    var colors = new Float32Array( numPoints*3 );
+
+    var k = 0;
+
+    for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
+	for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
+	    for (var z = -M_BALL_WORKING_AREA; z <= M_BALL_WORKING_AREA; z++) {
+		positions[ 3 * k ] = x;
+		positions[ 3 * k + 1 ] = y;
+		positions[ 3 * k + 2 ] = z;
+
+		var intensity = 255;
+		colors[ 3 * k ] = color.r * intensity;
+		colors[ 3 * k + 1 ] = color.g * intensity;
+		colors[ 3 * k + 2 ] = color.b * intensity;
+
+		k++;
+	    }
 	}
     }
 
-    points = {};
+    geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
+    geometry.addAttribute( 'color', new THREE.BufferAttribute( colors, 3 ) );
+    geometry.computeBoundingBox();
 
-    // for (var i = 0; i < points.length; i++) {
-    // 	scene.remove(points[i]);
-    // }
-
-    // points = [];
+    return geometry;
 }
+
+function generatePointcloud(color) {
+
+    var pointSize = 0.05;
+
+    var geometry = generatePointCloudGeometry(color);
+
+    // var material = new THREE.PointCloudMaterial( { size: pointSize, vertexColors: THREE.VertexColors } );
+
+    var uniforms = {
+	myColor: { type: "c", value: new THREE.Color( 0xffffff ) },
+    };
+
+    var attributes = {
+	size: { type: 'f', value: [] },
+    };
+
+    // Recomputing this BAD
+    var _side_length = (M_BALL_WORKING_AREA * 2 + 1);
+    var numPoints = _side_length * _side_length * _side_length;
+
+    for (var i=0; i < numPoints; i++) {
+	attributes.size.value[i] = 5 + Math.floor(Math.random() * 10);
+    }
+
+    var material = new THREE.ShaderMaterial({
+	uniforms: uniforms,
+	attributes: attributes,
+	vertexShader: $('#vertexShader').text(),
+	fragmentShader: $('#fragmentShader').text()
+    });
+
+    var pointcloud = new THREE.PointCloud( geometry, material );
+
+    return pointcloud;
+}
+
+
+
+
 
 function draw_box(x, y, z, scene) {
     var geometry = new THREE.BoxGeometry( 1, 1, 1 );
@@ -175,19 +236,31 @@ function strategy_2() {
 var render = function () {
     // requestAnimationFrame( render );
 
-    remove_boxes(scene, draw_points);
+    // remove_boxes(scene, draw_points);
 
     // cube.rotation.x += 0.1;
     // cube.rotation.y += 0.1;
 
-    strategy_2();
+    var pcBuffer = generatePointcloud( new THREE.Color( 1,0,0 ));
+    // pcBuffer.scale.set( 10,10,10 );
+    // pcBuffer.position.set( -5,0,5 );
+    scene.add( pcBuffer );
 
-    // renderer.render(scene, camera);
+    // strategy_2();
+
+    renderer.render(scene, camera);
 };
 
 // render();
 
 $(function() {
+    $.get( "js/vertex_shader.glsl", function( data ) {
+	$("#vertexShader").text(data);
+    });
+    $.get( "js/fragment_shader.glsl", function( data ) {
+	$("#fragmentShader").text(data);
+    });
+
     $('#submit').click(function() {
 	console.log('render');
 	render();
