@@ -15,21 +15,21 @@ camera.position.z = 200;
 
 var M_BALL_WORKING_AREA = 60;
 
-// var point_energy = new Array();
-// for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
-//     point_energy[x] = new Array();
-//     for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
-// 	point_energy[x][y] = new Array();
-//     }
-// }
+var point_energy = new Array();
+for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
+    point_energy[x] = new Array();
+    for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
+	point_energy[x][y] = new Array();
+    }
+}
 
-// var point_visited = new Array();
-// for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
-//     point_visited[x] = new Array();
-//     for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
-// 	point_visited[x][y] = new Array();
-//     }
-// }
+var point_visited = new Array();
+for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
+    point_visited[x] = new Array();
+    for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
+	point_visited[x][y] = new Array();
+    }
+}
 
 var draw_points = [];
 
@@ -114,8 +114,6 @@ function generatePointcloud(color) {
 
     var geometry = generatePointCloudGeometry(color);
 
-    // var material = new THREE.PointCloudMaterial( { size: pointSize, vertexColors: THREE.VertexColors } );
-
     var uniforms = {
 	myColor: { type: "c", value: new THREE.Color( 0xffffff ) },
     };
@@ -143,10 +141,6 @@ function generatePointcloud(color) {
 
     return pointcloud;
 }
-
-
-
-
 
 function draw_box(x, y, z, scene) {
     var geometry = new THREE.BoxGeometry( 1, 1, 1 );
@@ -233,20 +227,25 @@ function strategy_2() {
     }
 }
 
+function remove_boxes(scene, points) {
+
+    for (key in points) {
+	if (points[key] != 'outside') {
+	        scene.remove(points[key]);
+	    }
+    }
+
+    points = {};
+}
+
 var render = function () {
-    // requestAnimationFrame( render );
+    // BufferGeometry way
+    // var pcBuffer = generatePointcloud( new THREE.Color( 1,0,0 ));
+    // scene.add( pcBuffer );
 
-    // remove_boxes(scene, draw_points);
-
-    // cube.rotation.x += 0.1;
-    // cube.rotation.y += 0.1;
-
-    var pcBuffer = generatePointcloud( new THREE.Color( 1,0,0 ));
-    // pcBuffer.scale.set( 10,10,10 );
-    // pcBuffer.position.set( -5,0,5 );
-    scene.add( pcBuffer );
-
-    // strategy_2();
+    // Old way
+    remove_boxes(scene, draw_points);
+    strategy_2();
 
     renderer.render(scene, camera);
 };
