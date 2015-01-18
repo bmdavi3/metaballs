@@ -303,7 +303,7 @@ scene.add(light);
 
 camera.position.x = 60;
 camera.position.y = 60;
-camera.position.z = 200;
+camera.position.z = 90;
 
 var M_BALL = {
     x: 60,
@@ -656,9 +656,11 @@ $(function() {
 	$("#fragmentShader").text(data);
     });
 
-    $('#submit').click(function() {
-	console.log('render');
-	render();
-	console.log('done!');
-    })
+    render();
+
+    // $('#submit').click(function() {
+    // 	console.log('render');
+    // 	render();
+    // 	console.log('done!');
+    // })
 });
