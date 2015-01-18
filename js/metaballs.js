@@ -297,27 +297,35 @@ var renderer = new THREE.WebGLRenderer();
 renderer.setSize( window.innerWidth, window.innerHeight );
 document.body.appendChild( renderer.domElement );
 
-var light = new THREE.PointLight( 0xffffff, 8, 100 );
-light.position.set( 50, 50, 50 );
-scene.add( light );
+var light = new THREE.PointLight(0xffffff, 8, 0);
+light.position.set(60, 60, 200);
+scene.add(light);
 
+camera.position.x = 60;
+camera.position.y = 60;
 camera.position.z = 200;
 
-var M_BALL_WORKING_AREA = 60;
+var M_BALL = {
+    x: 60,
+    y: 60,
+    z: 60
+}
 
-var point_energy = new Array(M_BALL_WORKING_AREA + 1);
-for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
-    point_energy[x] = new Array(M_BALL_WORKING_AREA + 1);
-    for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
-	point_energy[x][y] = new Array(M_BALL_WORKING_AREA + 1);
+var M_BALL_WORKING_AREA = 120;
+
+var point_energy = new Array(M_BALL_WORKING_AREA);
+for (var x = 0; x < M_BALL_WORKING_AREA; x++) {
+    point_energy[x] = new Array(M_BALL_WORKING_AREA);
+    for (var y = 0; y < M_BALL_WORKING_AREA; y++) {
+	point_energy[x][y] = new Array(M_BALL_WORKING_AREA);
     }
 }
 
-var point_visited = new Array(M_BALL_WORKING_AREA + 1);
-for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
-    point_visited[x] = new Array(M_BALL_WORKING_AREA + 1);
-    for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
-	point_visited[x][y] = new Array(M_BALL_WORKING_AREA + 1);
+var point_visited = new Array(M_BALL_WORKING_AREA);
+for (var x = 0; x < M_BALL_WORKING_AREA; x++) {
+    point_visited[x] = new Array(M_BALL_WORKING_AREA);
+    for (var y = 0; y < M_BALL_WORKING_AREA; y++) {
+	point_visited[x][y] = new Array(M_BALL_WORKING_AREA);
     }
 }
 
@@ -469,7 +477,7 @@ function compute_neighbors(x, y, z, point_energy) {
 	var t_z = z + neighbor_diffs[i][2];
 
 	if (point_energy[t_x][t_y][t_z] == undefined) {
-	    point_energy[t_x][t_y][t_z] = score(t_x, t_y, t_z, 0, 0, 0);
+	    point_energy[t_x][t_y][t_z] = score(t_x, t_y, t_z, M_BALL.x, M_BALL.y, M_BALL.z);
 	}
 
 	if (point_energy[t_x][t_y][t_z] >= CUTOFF) {
@@ -491,6 +499,7 @@ function compute_neighbors(x, y, z, point_energy) {
 
 function do_edges(x, y, z, scene, point_energy) {
     point_visited[x][y][z] = true;
+    // point_energy[x][y][z] = score(x, y, z, M_BALL.x, M_BALL.y, M_BALL.z);
 
     var point_status = compute_neighbors(x, y, z, point_energy);
 
@@ -512,10 +521,10 @@ function do_edges(x, y, z, scene, point_energy) {
 
 function strategy_2() {
     // Find first outside point
-    for (var x = 0; x <= 1000; x++) {
-	var s = score(x, 0, 0, 0, 0, 0);
+    for (var x = M_BALL.x; x <= 1000; x++) {
+	var s = score(x, M_BALL.y, M_BALL.z, M_BALL.x, M_BALL.y, M_BALL.z);
 	if (s < CUTOFF) {
-	    do_edges(x, 0, 0, scene, point_energy);
+	    do_edges(x, M_BALL.y, M_BALL.z, scene, point_energy);
 	    break;
 	}
     }
@@ -532,14 +541,48 @@ function remove_boxes(scene, points) {
     points = {};
 }
 
+function blank_out_points(points) {
+    for (var i = 0; i < points.length; i++) {
+	for (var j = 0; j < points[i].length; j++) {
+	    for (var k = 0; k < points[i][j].length; k++) {
+		var blah = 1;
+		points[i][j][k] = null;
+		blah = 2;
+	    }
+	}
+    }
+}
+
+function non_null_points(points) {
+    var count = 0;
+
+    for (var i = 0; i < points.length; i++) {
+	for (var j = 0; j < points[i].length; j++) {
+	    for (var k = 0; k < points[i][j].length; k++) {
+		if (points[i][j][k] !== null) {
+		    count += 1;
+		}
+	    }
+	}
+    }
+
+    return count;
+}
+
 var render = function () {
     // BufferGeometry way
     // var pcBuffer = generatePointcloud( new THREE.Color( 1,0,0 ));
     // scene.add( pcBuffer );
 
+    blank_out_points(point_energy);
+    blank_out_points(point_visited);
+
     // Old way
     remove_boxes(scene, draw_points);
     strategy_2();
+
+    console.log(non_null_points(point_energy));
+    console.log(non_null_points(point_visited));
 
     console.log(score_calls + ' score calls');
 
