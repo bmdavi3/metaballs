@@ -475,6 +475,36 @@ function draw_box(x, y, z, scene) {
     // return cube;
 }
 
+function draw_triangles(triangles, scene) {
+
+    var geom = new THREE.Geometry();
+
+    for (var i = 0; i < triangles.length; i++) {
+	var x = triangles[i].x;
+	var y = triangles[i].y;
+	var z = triangles[i].z;
+
+	var v1 = new THREE.Vector3(x, y, z);
+	var v2 = new THREE.Vector3(x + 1, y, z);
+	var v3 = new THREE.Vector3(x + 0.5, y + 1, z);
+
+	geom.vertices.push( v1 );
+	geom.vertices.push( v2 );
+	geom.vertices.push( v3 );
+
+	geom.faces.push(new THREE.Face3(i * 3, i * 3 + 1, i * 3 + 2));
+    }
+
+    geom.computeFaceNormals();
+
+    var mesh = new THREE.Mesh( geom, new THREE.MeshNormalMaterial() );
+
+    mesh.doubleSided = true;
+    scene.add(mesh);
+
+    return mesh;
+}
+
 var score_calls = 0;
 
 function score(x1, y1, z1, x2, y2, z2) {
@@ -521,13 +551,15 @@ function compute_neighbors(x, y, z, point_energy) {
 
 function do_edges(x, y, z, scene, point_energy) {
     point_visited[x][y][z] = true;
-    // point_energy[x][y][z] = score(x, y, z, M_BALL.x, M_BALL.y, M_BALL.z);
 
     var point_status = compute_neighbors(x, y, z, point_energy);
 
     if (point_status == STATUS['MIXED']) {
-	// draw_points.push(x, y, z);
-	draw_points.push(draw_box(x, y, z, scene));
+	draw_points.push({
+	    x: x,
+	    y: y,
+	    z: z
+	});
 
 	for (var i = 0; i < neighbor_diffs.length; i++) {
 	    var t_x = x + neighbor_diffs[i][0];
@@ -608,6 +640,8 @@ var render = function () {
     console.log(non_null_points(point_visited));
 
     console.log(score_calls + ' score calls');
+
+    draw_triangles(draw_points, scene);
 
     renderer.render(scene, camera);
 };
