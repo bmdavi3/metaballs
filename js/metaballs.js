@@ -620,6 +620,31 @@ function get_triangles(edge_points, point_energy, cutoff) {
     return triangles;
 }
 
+function get_normal(v) {
+    // http://www.wolframalpha.com/input/?i=derivative+1%2F%28%28x1-x2%29%5E2+%2B+%28y1-y2%29%5E2+%2B+%28z1-z2%29%5E2%29
+
+    var x1 = v.x;
+    var y1 = v.y;
+    var z1 = v.z;
+
+    var x2 = M_BALL.x;
+    var y2 = M_BALL.y;
+    var z2 = M_BALL.z;
+
+    var a = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2);
+    var b = a * a;
+
+    var x = (-2 * (x2 - x1)) / b;
+    var y = (-2 * (y2 - y1)) / b;
+    var z = (-2 * (z2 - z1)) / b;
+
+    var normal = new THREE.Vector3(x, y, z);
+
+    normal.normalize();
+
+    return normal;
+}
+
 function draw_triangles(triangle, scene) {
 
     var geom = new THREE.Geometry();
@@ -633,17 +658,35 @@ function draw_triangles(triangle, scene) {
         geom.vertices.push( v2 );
         geom.vertices.push( v3 );
 
-        geom.faces.push(new THREE.Face3(i * 3, i * 3 + 1, i * 3 + 2));
+        var normals = [get_normal(v1), get_normal(v2), get_normal(v3)];
+
+        geom.faces.push(new THREE.Face3(i * 3, i * 3 + 1, i * 3 + 2, normals));
     }
 
-    geom.computeFaceNormals();
+    var mnm = new THREE.MeshNormalMaterial();
+    // mnm.wireframe = true;
+    mnm.shading = THREE.SmoothShading;
 
-    var mesh = new THREE.Mesh( geom, new THREE.MeshNormalMaterial() );
+    var mesh = new THREE.Mesh( geom, mnm );
 
     mesh.doubleSided = true;
     scene.add(mesh);
 
-    return mesh;
+
+
+    // Arrows
+    // for (var i = 0; i < triangle.length; i++) {
+    //     var v1 = new THREE.Vector3(triangle[i][0][0], triangle[i][0][1], triangle[i][0][2]);
+    //     var v2 = new THREE.Vector3(triangle[i][1][0], triangle[i][1][1], triangle[i][1][2]);
+    //     var v3 = new THREE.Vector3(triangle[i][2][0], triangle[i][2][1], triangle[i][2][2]);
+
+    //     var arrow = new THREE.ArrowHelper(get_normal(v1), v1, 2, 0x3333FF);
+    //     scene.add(arrow);
+    //     var arrow = new THREE.ArrowHelper(get_normal(v2), v2, 2, 0x3333FF);
+    //     scene.add(arrow);
+    //     var arrow = new THREE.ArrowHelper(get_normal(v3), v3, 2, 0x3333FF);
+    //     scene.add(arrow);
+    // }
 }
 
 var score_calls = 0;
