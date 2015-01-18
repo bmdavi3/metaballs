@@ -476,7 +476,7 @@ function compute_neighbors(x, y, z, point_energy) {
 	var t_y = y + neighbor_diffs[i][1];
 	var t_z = z + neighbor_diffs[i][2];
 
-	if (point_energy[t_x][t_y][t_z] == undefined) {
+	if (point_energy[t_x][t_y][t_z] === null) {
 	    point_energy[t_x][t_y][t_z] = score(t_x, t_y, t_z, M_BALL.x, M_BALL.y, M_BALL.z);
 	}
 
@@ -511,7 +511,7 @@ function do_edges(x, y, z, scene, point_energy) {
 	    var t_y = y + neighbor_diffs[i][1];
 	    var t_z = z + neighbor_diffs[i][2];
 
-	    if (point_visited[t_x][t_y][t_z] == undefined) {
+	    if (point_visited[t_x][t_y][t_z] === null) {
 		do_edges(t_x, t_y, t_z, scene, point_energy);
 	    }
 	}
