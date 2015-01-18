@@ -305,11 +305,17 @@ camera.position.x = 60;
 camera.position.y = 60;
 camera.position.z = 90;
 
-var M_BALL = {
-    x: 60,
-    y: 60,
-    z: 60
-}
+var M_BALLS = [
+    {
+        x: 50,
+        y: 60,
+        z: 60
+    }, {
+        x: 70,
+        y: 60,
+        z: 60
+    }
+]
 
 var M_BALL_WORKING_AREA = 120;
 
@@ -337,7 +343,7 @@ var STATUS = {
     'MIXED': 2
 }
 
-var CUTOFF = 0.0071;
+var CUTOFF = 0.0151;
 
 var neighbor_diffs = [
     [1, 1, 1],
@@ -623,20 +629,26 @@ function get_triangles(edge_points, point_energy, cutoff) {
 function get_normal(v) {
     // http://www.wolframalpha.com/input/?i=derivative+1%2F%28%28x1-x2%29%5E2+%2B+%28y1-y2%29%5E2+%2B+%28z1-z2%29%5E2%29
 
-    var x1 = v.x;
-    var y1 = v.y;
-    var z1 = v.z;
+    var x = 0;
+    var y = 0;
+    var z = 0;
 
-    var x2 = M_BALL.x;
-    var y2 = M_BALL.y;
-    var z2 = M_BALL.z;
+    for (var i = 0; i < M_BALLS.length; i++) {
+        var x1 = v.x;
+        var y1 = v.y;
+        var z1 = v.z;
 
-    var a = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2);
-    var b = a * a;
+        var x2 = M_BALLS[i].x;
+        var y2 = M_BALLS[i].y;
+        var z2 = M_BALLS[i].z;
 
-    var x = (-2 * (x2 - x1)) / b;
-    var y = (-2 * (y2 - y1)) / b;
-    var z = (-2 * (z2 - z1)) / b;
+        var a = (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2);
+        var b = a * a;
+
+        x += (-2 * (x2 - x1)) / b;
+        y += (-2 * (y2 - y1)) / b;
+        z += (-2 * (z2 - z1)) / b;
+    }
 
     var normal = new THREE.Vector3(x, y, z);
 
@@ -691,14 +703,24 @@ function draw_triangles(triangle, scene) {
 
 var score_calls = 0;
 
-function score(x1, y1, z1, x2, y2, z2) {
+function score(x1, y1, z1, M_BALLS) {
     score_calls += 1;
 
-    var x_d = Math.abs(x1 - x2);
-    var y_d = Math.abs(y1 - y2);
-    var z_d = Math.abs(z1 - x2);
+    var total_score = 0;
 
-    return 1.0 / (x_d * x_d + y_d * y_d + z_d * z_d);
+    for (var i = 0; i < M_BALLS.length; i++) {
+        var x2 = M_BALLS[i].x;
+        var y2 = M_BALLS[i].y;
+        var z2 = M_BALLS[i].z;
+
+        var x_d = Math.abs(x1 - x2);
+        var y_d = Math.abs(y1 - y2);
+        var z_d = Math.abs(z1 - z2);
+
+        total_score += 1.0 / (x_d * x_d + y_d * y_d + z_d * z_d);
+    }
+
+    return total_score;
 }
 
 
@@ -713,7 +735,7 @@ function compute_neighbors(x, y, z, point_energy) {
         var t_z = z + neighbor_diffs[i][2];
 
         if (point_energy[t_x][t_y][t_z] === null) {
-            point_energy[t_x][t_y][t_z] = score(t_x, t_y, t_z, M_BALL.x, M_BALL.y, M_BALL.z);
+            point_energy[t_x][t_y][t_z] = score(t_x, t_y, t_z, M_BALLS);
         }
 
         if (point_energy[t_x][t_y][t_z] >= CUTOFF) {
@@ -759,12 +781,15 @@ function do_edges(x, y, z, scene, point_energy) {
 
 
 function strategy_2() {
-    // Find first outside point
-    for (var x = M_BALL.x; x <= 1000; x++) {
-        var s = score(x, M_BALL.y, M_BALL.z, M_BALL.x, M_BALL.y, M_BALL.z);
-        if (s < CUTOFF) {
-            do_edges(x, M_BALL.y, M_BALL.z, scene, point_energy);
-            break;
+    for (var i = 0; i < M_BALLS.length; i++) {
+        var mball = M_BALLS[i];
+
+        for (var x = mball.x; x <= 1000; x++) {
+            var s = score(x, mball.y, mball.z, M_BALLS);
+            if (s < CUTOFF) {
+                do_edges(x, mball.y, mball.z, scene, point_energy);
+                break;
+            }
         }
     }
 }
@@ -813,6 +838,8 @@ var render = function () {
     // var pcBuffer = generatePointcloud( new THREE.Color( 1,0,0 ));
     // scene.add( pcBuffer );
 
+    console.time('foo');
+
     blank_out_points(point_energy);
     blank_out_points(point_visited);
 
@@ -831,6 +858,8 @@ var render = function () {
     // draw_triangles(edge_points, scene);
 
     renderer.render(scene, camera);
+
+    console.timeEnd('foo');
 };
 
 // render();
