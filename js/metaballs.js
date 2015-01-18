@@ -317,7 +317,7 @@ var point_energy = new Array(M_BALL_WORKING_AREA);
 for (var x = 0; x < M_BALL_WORKING_AREA; x++) {
     point_energy[x] = new Array(M_BALL_WORKING_AREA);
     for (var y = 0; y < M_BALL_WORKING_AREA; y++) {
-	point_energy[x][y] = new Array(M_BALL_WORKING_AREA);
+        point_energy[x][y] = new Array(M_BALL_WORKING_AREA);
     }
 }
 
@@ -325,11 +325,11 @@ var point_visited = new Array(M_BALL_WORKING_AREA);
 for (var x = 0; x < M_BALL_WORKING_AREA; x++) {
     point_visited[x] = new Array(M_BALL_WORKING_AREA);
     for (var y = 0; y < M_BALL_WORKING_AREA; y++) {
-	point_visited[x][y] = new Array(M_BALL_WORKING_AREA);
+        point_visited[x][y] = new Array(M_BALL_WORKING_AREA);
     }
 }
 
-var draw_points = [];
+var edge_points = [];
 
 var STATUS = {
     'ALL_IN': 0,
@@ -383,20 +383,20 @@ function generatePointCloudGeometry(color){
     var k = 0;
 
     for (var x = -M_BALL_WORKING_AREA; x <= M_BALL_WORKING_AREA; x++) {
-	for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
-	    for (var z = -M_BALL_WORKING_AREA; z <= M_BALL_WORKING_AREA; z++) {
-		positions[ 3 * k ] = x;
-		positions[ 3 * k + 1 ] = y;
-		positions[ 3 * k + 2 ] = z;
+        for (var y = -M_BALL_WORKING_AREA; y <= M_BALL_WORKING_AREA; y++) {
+            for (var z = -M_BALL_WORKING_AREA; z <= M_BALL_WORKING_AREA; z++) {
+                positions[ 3 * k ] = x;
+                positions[ 3 * k + 1 ] = y;
+                positions[ 3 * k + 2 ] = z;
 
-		var intensity = 255;
-		colors[ 3 * k ] = color.r * intensity;
-		colors[ 3 * k + 1 ] = color.g * intensity;
-		colors[ 3 * k + 2 ] = color.b * intensity;
+                var intensity = 255;
+                colors[ 3 * k ] = color.r * intensity;
+                colors[ 3 * k + 1 ] = color.g * intensity;
+                colors[ 3 * k + 2 ] = color.b * intensity;
 
-		k++;
-	    }
-	}
+                k++;
+            }
+        }
     }
 
     geometry.addAttribute( 'position', new THREE.BufferAttribute( positions, 3 ) );
@@ -413,11 +413,11 @@ function generatePointcloud(color) {
     var geometry = generatePointCloudGeometry(color);
 
     var uniforms = {
-	myColor: { type: "c", value: new THREE.Color( 0xffffff ) },
+        myColor: { type: "c", value: new THREE.Color( 0xffffff ) },
     };
 
     var attributes = {
-	size: { type: 'f', value: [] },
+        size: { type: 'f', value: [] },
     };
 
     // Recomputing this BAD
@@ -425,14 +425,14 @@ function generatePointcloud(color) {
     var numPoints = _side_length * _side_length * _side_length;
 
     for (var i=0; i < numPoints; i++) {
-	attributes.size.value[i] = 5 + Math.floor(Math.random() * 10);
+        attributes.size.value[i] = 5 + Math.floor(Math.random() * 10);
     }
 
     var material = new THREE.ShaderMaterial({
-	uniforms: uniforms,
-	attributes: attributes,
-	vertexShader: $('#vertexShader').text(),
-	fragmentShader: $('#fragmentShader').text()
+        uniforms: uniforms,
+        attributes: attributes,
+        vertexShader: $('#vertexShader').text(),
+        fragmentShader: $('#fragmentShader').text()
     });
 
     var pointcloud = new THREE.PointCloud( geometry, material );
@@ -463,7 +463,7 @@ function draw_box(x, y, z, scene) {
 
     // var geometry = new THREE.BoxGeometry( 1, 1, 1 );
     // var material = new THREE.MeshLambertMaterial({
-    // 	color: 0x00ff00
+    //     color: 0x00ff00
     // });
 
     // var cube = new THREE.Mesh( geometry, material );
@@ -475,24 +475,165 @@ function draw_box(x, y, z, scene) {
     // return cube;
 }
 
-function draw_triangles(triangles, scene) {
+function vertex_interp(p1, p2, valp1, valp2, cutoff) {
+    if (Math.abs(cutoff - valp1) < 0.000000000001) {
+        return p1;
+    }
+
+    if (Math.abs(cutoff - valp2) < 0.000000000001) {
+        return p2;
+    }
+
+    if (Math.abs(valp1 - valp2) < 0.0000000001) {
+        return p1;
+    }
+
+    var mu = (cutoff - valp1) / (valp2 - valp1);
+
+    var p = [p1[0] + mu * (p2[0] - p1[0]),
+             p1[1] + mu * (p2[1] - p1[1]),
+             p1[2] + mu * (p2[2] - p1[2])];
+
+    return p;
+}
+
+function get_triangles(edge_points, point_energy, cutoff) {
+    var triangles = [];
+
+    for (var i = 0; i < edge_points.length; i++) {
+        var x = edge_points[i].x;
+        var y = edge_points[i].y;
+        var z = edge_points[i].z;
+
+        var cube_index = 0;
+
+        var value = [
+            point_energy[x][y][z],
+            point_energy[x+1][y][z],
+            point_energy[x+1][y+1][z],
+            point_energy[x][y+1][z],
+            point_energy[x][y][z+1],
+            point_energy[x+1][y][z+1],
+            point_energy[x+1][y+1][z+1],
+            point_energy[x][y+1][z+1]
+        ];
+
+        var position = [
+            [x, y, z],
+            [x + 1, y, z],
+            [x + 1, y + 1, z],
+            [x, y + 1, z],
+            [x, y, z + 1],
+            [x + 1, y, z + 1],
+            [x + 1, y + 1, z + 1],
+            [x, y + 1, z + 1]
+        ];
+
+        if (value[0] < cutoff) {
+            cube_index |= 1;
+        }
+        if (value[1] < cutoff) {
+            cube_index |= 2;
+        }
+        if (value[2] < cutoff) {
+            cube_index |= 4;
+        }
+        if (value[3] < cutoff) {
+            cube_index |= 8;
+        }
+        if (value[4] < cutoff) {
+            cube_index |= 16;
+        }
+        if (value[5] < cutoff) {
+            cube_index |= 32;
+        }
+        if (value[6] < cutoff) {
+            cube_index |= 64;
+        }
+        if (value[7] < cutoff) {
+            cube_index |= 128;
+        }
+
+        var et = edgeTable[cube_index];
+
+        var vertex_list = [];
+
+        for (var j = 0; j < 12; j++) {
+            vertex_list.push([0.0, 0.0, 0.0]);
+        }
+
+        if (et == 0) {
+            continue;
+        }
+        if (et & 1) {
+            vertex_list[0] = vertex_interp(position[0],position[1],value[0],value[1], cutoff);
+        }
+        if (et & 2) {
+            vertex_list[1] = vertex_interp(position[1],position[2],value[1],value[2], cutoff);
+        }
+        if (et & 4) {
+            vertex_list[2] = vertex_interp(position[2],position[3],value[2],value[3], cutoff);
+        }
+        if (et & 8) {
+            vertex_list[3] = vertex_interp(position[3],position[0],value[3],value[0], cutoff);
+        }
+        if (et & 16) {
+            vertex_list[4] = vertex_interp(position[4],position[5],value[4],value[5], cutoff);
+        }
+        if (et & 32) {
+            vertex_list[5] = vertex_interp(position[5],position[6],value[5],value[6], cutoff);
+        }
+        if (et & 64) {
+            vertex_list[6] = vertex_interp(position[6],position[7],value[6],value[7], cutoff);
+        }
+        if (et & 128) {
+            vertex_list[7] = vertex_interp(position[7],position[4],value[7],value[4], cutoff);
+        }
+        if (et & 256) {
+            vertex_list[8] = vertex_interp(position[0],position[4],value[0],value[4], cutoff);
+        }
+        if (et & 512) {
+            vertex_list[9] = vertex_interp(position[1],position[5],value[1],value[5], cutoff);
+        }
+        if (et & 1024) {
+            vertex_list[10] = vertex_interp(position[2],position[6],value[2],value[6], cutoff);
+        }
+        if (et & 2048) {
+            vertex_list[11] = vertex_interp(position[3],position[7],value[3],value[7], cutoff);
+        }
+
+        var tt = triTable[cube_index];
+
+        var indexes = [0, 3, 6, 9, 12, 15];
+
+        for (var j = 0; j < indexes.length; j++) {
+            if (tt[indexes[j]] != -1) {
+                triangles.push([
+                    vertex_list[tt[indexes[j]]],
+                    vertex_list[tt[indexes[j]+1]],
+                    vertex_list[tt[indexes[j]+2]]
+                ]);
+            }
+        }
+    }
+
+    return triangles;
+}
+
+function draw_triangles(triangle, scene) {
 
     var geom = new THREE.Geometry();
 
-    for (var i = 0; i < triangles.length; i++) {
-	var x = triangles[i].x;
-	var y = triangles[i].y;
-	var z = triangles[i].z;
+    for (var i = 0; i < triangle.length; i++) {
+        var v1 = new THREE.Vector3(triangle[i][0][0], triangle[i][0][1], triangle[i][0][2]);
+        var v2 = new THREE.Vector3(triangle[i][1][0], triangle[i][1][1], triangle[i][1][2]);
+        var v3 = new THREE.Vector3(triangle[i][2][0], triangle[i][2][1], triangle[i][2][2]);
 
-	var v1 = new THREE.Vector3(x, y, z);
-	var v2 = new THREE.Vector3(x + 1, y, z);
-	var v3 = new THREE.Vector3(x + 0.5, y + 1, z);
+        geom.vertices.push( v1 );
+        geom.vertices.push( v2 );
+        geom.vertices.push( v3 );
 
-	geom.vertices.push( v1 );
-	geom.vertices.push( v2 );
-	geom.vertices.push( v3 );
-
-	geom.faces.push(new THREE.Face3(i * 3, i * 3 + 1, i * 3 + 2));
+        geom.faces.push(new THREE.Face3(i * 3, i * 3 + 1, i * 3 + 2));
     }
 
     geom.computeFaceNormals();
@@ -524,27 +665,27 @@ function compute_neighbors(x, y, z, point_energy) {
     var all_out = true;
 
     for (var i = 0; i < neighbor_diffs.length; i++) {
-	var t_x = x + neighbor_diffs[i][0];
-	var t_y = y + neighbor_diffs[i][1];
-	var t_z = z + neighbor_diffs[i][2];
+        var t_x = x + neighbor_diffs[i][0];
+        var t_y = y + neighbor_diffs[i][1];
+        var t_z = z + neighbor_diffs[i][2];
 
-	if (point_energy[t_x][t_y][t_z] === null) {
-	    point_energy[t_x][t_y][t_z] = score(t_x, t_y, t_z, M_BALL.x, M_BALL.y, M_BALL.z);
-	}
+        if (point_energy[t_x][t_y][t_z] === null) {
+            point_energy[t_x][t_y][t_z] = score(t_x, t_y, t_z, M_BALL.x, M_BALL.y, M_BALL.z);
+        }
 
-	if (point_energy[t_x][t_y][t_z] >= CUTOFF) {
-	    all_out = false;
-	} else {
-	    all_in = false;
-	}
+        if (point_energy[t_x][t_y][t_z] >= CUTOFF) {
+            all_out = false;
+        } else {
+            all_in = false;
+        }
     }
 
     if (all_out == true) {
-	return STATUS['ALL_OUT'];
+        return STATUS['ALL_OUT'];
     } else if (all_in == true) {
-	return STATUS['ALL_IN'];
+        return STATUS['ALL_IN'];
     } else {
-	return STATUS['MIXED'];
+        return STATUS['MIXED'];
     }
 }
 
@@ -555,21 +696,21 @@ function do_edges(x, y, z, scene, point_energy) {
     var point_status = compute_neighbors(x, y, z, point_energy);
 
     if (point_status == STATUS['MIXED']) {
-	draw_points.push({
-	    x: x,
-	    y: y,
-	    z: z
-	});
+        edge_points.push({
+            x: x,
+            y: y,
+            z: z
+        });
 
-	for (var i = 0; i < neighbor_diffs.length; i++) {
-	    var t_x = x + neighbor_diffs[i][0];
-	    var t_y = y + neighbor_diffs[i][1];
-	    var t_z = z + neighbor_diffs[i][2];
+        for (var i = 0; i < neighbor_diffs.length; i++) {
+            var t_x = x + neighbor_diffs[i][0];
+            var t_y = y + neighbor_diffs[i][1];
+            var t_z = z + neighbor_diffs[i][2];
 
-	    if (point_visited[t_x][t_y][t_z] === null) {
-		do_edges(t_x, t_y, t_z, scene, point_energy);
-	    }
-	}
+            if (point_visited[t_x][t_y][t_z] === null) {
+                do_edges(t_x, t_y, t_z, scene, point_energy);
+            }
+        }
     }
 }
 
@@ -577,20 +718,20 @@ function do_edges(x, y, z, scene, point_energy) {
 function strategy_2() {
     // Find first outside point
     for (var x = M_BALL.x; x <= 1000; x++) {
-	var s = score(x, M_BALL.y, M_BALL.z, M_BALL.x, M_BALL.y, M_BALL.z);
-	if (s < CUTOFF) {
-	    do_edges(x, M_BALL.y, M_BALL.z, scene, point_energy);
-	    break;
-	}
+        var s = score(x, M_BALL.y, M_BALL.z, M_BALL.x, M_BALL.y, M_BALL.z);
+        if (s < CUTOFF) {
+            do_edges(x, M_BALL.y, M_BALL.z, scene, point_energy);
+            break;
+        }
     }
 }
 
 function remove_boxes(scene, points) {
 
     for (key in points) {
-	if (points[key] != 'outside') {
-	        scene.remove(points[key]);
-	    }
+        if (points[key] != 'outside') {
+                scene.remove(points[key]);
+            }
     }
 
     points = {};
@@ -598,13 +739,13 @@ function remove_boxes(scene, points) {
 
 function blank_out_points(points) {
     for (var i = 0; i < points.length; i++) {
-	for (var j = 0; j < points[i].length; j++) {
-	    for (var k = 0; k < points[i][j].length; k++) {
-		var blah = 1;
-		points[i][j][k] = null;
-		blah = 2;
-	    }
-	}
+        for (var j = 0; j < points[i].length; j++) {
+            for (var k = 0; k < points[i][j].length; k++) {
+                var blah = 1;
+                points[i][j][k] = null;
+                blah = 2;
+            }
+        }
     }
 }
 
@@ -612,13 +753,13 @@ function non_null_points(points) {
     var count = 0;
 
     for (var i = 0; i < points.length; i++) {
-	for (var j = 0; j < points[i].length; j++) {
-	    for (var k = 0; k < points[i][j].length; k++) {
-		if (points[i][j][k] !== null) {
-		    count += 1;
-		}
-	    }
-	}
+        for (var j = 0; j < points[i].length; j++) {
+            for (var k = 0; k < points[i][j].length; k++) {
+                if (points[i][j][k] !== null) {
+                    count += 1;
+                }
+            }
+        }
     }
 
     return count;
@@ -633,7 +774,7 @@ var render = function () {
     blank_out_points(point_visited);
 
     // Old way
-    remove_boxes(scene, draw_points);
+    remove_boxes(scene, edge_points);
     strategy_2();
 
     console.log(non_null_points(point_energy));
@@ -641,7 +782,10 @@ var render = function () {
 
     console.log(score_calls + ' score calls');
 
-    draw_triangles(draw_points, scene);
+    var triangles = get_triangles(edge_points, point_energy, CUTOFF);
+
+    draw_triangles(triangles, scene);
+    // draw_triangles(edge_points, scene);
 
     renderer.render(scene, camera);
 };
@@ -650,17 +794,17 @@ var render = function () {
 
 $(function() {
     $.get( "js/vertex_shader.glsl", function( data ) {
-	$("#vertexShader").text(data);
+        $("#vertexShader").text(data);
     });
     $.get( "js/fragment_shader.glsl", function( data ) {
-	$("#fragmentShader").text(data);
+        $("#fragmentShader").text(data);
     });
 
     render();
 
     // $('#submit').click(function() {
-    // 	console.log('render');
-    // 	render();
-    // 	console.log('done!');
+    //     console.log('render');
+    //     render();
+    //     console.log('done!');
     // })
 });
