@@ -441,16 +441,38 @@ function generatePointcloud(color) {
 }
 
 function draw_box(x, y, z, scene) {
-    var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-    var material = new THREE.MeshLambertMaterial({
-	color: 0x00ff00
-    });
-    var cube = new THREE.Mesh( geometry, material );
-    cube.position.x = x;
-    cube.position.y = y;
-    cube.position.z = z;
-    scene.add( cube );
-    return cube;
+
+    var geom = new THREE.Geometry();
+    var v1 = new THREE.Vector3(x, y, z);
+    var v2 = new THREE.Vector3(x + 1, y, z);
+    var v3 = new THREE.Vector3(x + 0.5, y + 1, z);
+
+    geom.vertices.push( v1 );
+    geom.vertices.push( v2 );
+    geom.vertices.push( v3 );
+
+    geom.faces.push( new THREE.Face3( 0, 1, 2 ) );
+    geom.computeFaceNormals();
+
+    var mesh = new THREE.Mesh( geom, new THREE.MeshNormalMaterial() );
+    mesh.doubleSided = true;
+    scene.add(mesh);
+
+    return mesh;
+
+
+    // var geometry = new THREE.BoxGeometry( 1, 1, 1 );
+    // var material = new THREE.MeshLambertMaterial({
+    // 	color: 0x00ff00
+    // });
+
+    // var cube = new THREE.Mesh( geometry, material );
+    // cube.position.x = x;
+    // cube.position.y = y;
+    // cube.position.z = z;
+    // scene.add( cube );
+
+    // return cube;
 }
 
 var score_calls = 0;
@@ -504,6 +526,7 @@ function do_edges(x, y, z, scene, point_energy) {
     var point_status = compute_neighbors(x, y, z, point_energy);
 
     if (point_status == STATUS['MIXED']) {
+	// draw_points.push(x, y, z);
 	draw_points.push(draw_box(x, y, z, scene));
 
 	for (var i = 0; i < neighbor_diffs.length; i++) {
