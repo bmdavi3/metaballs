@@ -446,40 +446,6 @@ function generatePointcloud(color) {
     return pointcloud;
 }
 
-function draw_box(x, y, z, scene) {
-
-    var geom = new THREE.Geometry();
-    var v1 = new THREE.Vector3(x, y, z);
-    var v2 = new THREE.Vector3(x + 1, y, z);
-    var v3 = new THREE.Vector3(x + 0.5, y + 1, z);
-
-    geom.vertices.push( v1 );
-    geom.vertices.push( v2 );
-    geom.vertices.push( v3 );
-
-    geom.faces.push( new THREE.Face3( 0, 1, 2 ) );
-    geom.computeFaceNormals();
-
-    var mesh = new THREE.Mesh( geom, new THREE.MeshNormalMaterial() );
-    mesh.doubleSided = true;
-    scene.add(mesh);
-
-    return mesh;
-
-
-    // var geometry = new THREE.BoxGeometry( 1, 1, 1 );
-    // var material = new THREE.MeshLambertMaterial({
-    //     color: 0x00ff00
-    // });
-
-    // var cube = new THREE.Mesh( geometry, material );
-    // cube.position.x = x;
-    // cube.position.y = y;
-    // cube.position.z = z;
-    // scene.add( cube );
-
-    // return cube;
-}
 
 function vertex_interp(p1, p2, valp1, valp2, cutoff) {
     if (Math.abs(cutoff - valp1) < 0.000000000001) {
@@ -684,21 +650,7 @@ function draw_triangles(triangle, scene) {
     mesh.doubleSided = true;
     scene.add(mesh);
 
-
-
-    // Arrows
-    // for (var i = 0; i < triangle.length; i++) {
-    //     var v1 = new THREE.Vector3(triangle[i][0][0], triangle[i][0][1], triangle[i][0][2]);
-    //     var v2 = new THREE.Vector3(triangle[i][1][0], triangle[i][1][1], triangle[i][1][2]);
-    //     var v3 = new THREE.Vector3(triangle[i][2][0], triangle[i][2][1], triangle[i][2][2]);
-
-    //     var arrow = new THREE.ArrowHelper(get_normal(v1), v1, 2, 0x3333FF);
-    //     scene.add(arrow);
-    //     var arrow = new THREE.ArrowHelper(get_normal(v2), v2, 2, 0x3333FF);
-    //     scene.add(arrow);
-    //     var arrow = new THREE.ArrowHelper(get_normal(v3), v3, 2, 0x3333FF);
-    //     scene.add(arrow);
-    // }
+    return mesh;
 }
 
 var score_calls = 0;
@@ -794,24 +746,20 @@ function strategy_2() {
     }
 }
 
-function remove_boxes(scene, points) {
+function remove_elements(scene, elements) {
 
-    for (key in points) {
-        if (points[key] != 'outside') {
-                scene.remove(points[key]);
-            }
+    for (var i = 0; i < elements.length; i++) {
+        scene.remove(elements[i]);
     }
 
-    points = {};
+    elements = [];
 }
 
 function blank_out_points(points) {
     for (var i = 0; i < points.length; i++) {
         for (var j = 0; j < points[i].length; j++) {
             for (var k = 0; k < points[i][j].length; k++) {
-                var blah = 1;
                 points[i][j][k] = null;
-                blah = 2;
             }
         }
     }
@@ -833,7 +781,18 @@ function non_null_points(points) {
     return count;
 }
 
-var render = function () {
+var time;
+var theta = 0;
+
+function render () {
+    requestAnimationFrame(render);
+
+    var now = new Date().getTime();
+    var dt = now - (time || now);
+    time = now;
+
+    M_BALLS[1].x = Math.round(70 + Math.sin(time / 1000.0) * 10);
+
     // BufferGeometry way
     // var pcBuffer = generatePointcloud( new THREE.Color( 1,0,0 ));
     // scene.add( pcBuffer );
@@ -843,26 +802,30 @@ var render = function () {
     blank_out_points(point_energy);
     blank_out_points(point_visited);
 
-    // Old way
-    remove_boxes(scene, edge_points);
     strategy_2();
 
-    console.log(non_null_points(point_energy));
-    console.log(non_null_points(point_visited));
+    // console.log(non_null_points(point_energy));
+    // console.log(non_null_points(point_visited));
 
     console.log(score_calls + ' score calls');
 
     var triangles = get_triangles(edge_points, point_energy, CUTOFF);
-
-    draw_triangles(triangles, scene);
+    console.log(edge_points.length + ' edge points');
+    console.log(triangles.length + ' triangles');
+    var mesh = draw_triangles(triangles, scene);
     // draw_triangles(edge_points, scene);
 
     renderer.render(scene, camera);
 
+    // remove_elements(scene, edge_points);
+    scene.remove(mesh);
+
+    edge_points = [];
+    score_calls = 0;
+
     console.timeEnd('foo');
 };
 
-// render();
 
 $(function() {
     $.get( "js/vertex_shader.glsl", function( data ) {
@@ -873,10 +836,4 @@ $(function() {
     });
 
     render();
-
-    // $('#submit').click(function() {
-    //     console.log('render');
-    //     render();
-    //     console.log('done!');
-    // })
 });
